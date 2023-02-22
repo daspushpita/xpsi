@@ -9,6 +9,7 @@ from .cellmesh.integrator_for_time_invariance import integrate as _integrator
 
 from .Parameter import Parameter
 from .ParameterSubspace import ParameterSubspace
+from .interpolator import BHAC_Interpolator
 
 class RayError(xpsiError):
     """ Raised if a problem was encountered during ray integration. """
@@ -83,6 +84,7 @@ class Elsewhere(ParameterSubspace):
 
     """
     required_names = ['elsewhere_temperature (if no custom specification)']
+    optional_names = ['mycoolgrid','myelsewhere']
 
     def __init__(self,
                  sqrt_num_cells = 64,
@@ -90,10 +92,14 @@ class Elsewhere(ParameterSubspace):
                  bounds = None,
                  values = None,
                  custom = None,
-                 image_order_limit = None):
+                 image_order_limit = None,
+                 mycoolgrid = False,
+                 myelsewhere = False):
 
         self.sqrt_num_cells = sqrt_num_cells
         self.num_rays = num_rays
+        self.mycoolgrid = mycoolgrid
+        self.myelsewhere = myelsewhere 
 
         self.image_order_limit = image_order_limit
 
@@ -230,26 +236,64 @@ class Elsewhere(ParameterSubspace):
             An *ndarray[n,n]* of mesh-point colatitudes.
 
         """
-        if args: # hot region mesh shape information
-            cellParamVecs = _np.ones((args[0].shape[0],
-                                      args[0].shape[1],
-                                      len(self.vector)+1),
-                                     dtype=_np.double)
+        if not self.mycoolgrid:
+            if args: # hot region mesh shape information
+                cellParamVecs = _np.ones((args[0].shape[0],
+                                          args[0].shape[1],
+                                          len(self.vector)+1),
+                                         dtype=_np.double)
 
-            # get self.vector because there may be fixed variables
-            # that also need to be directed to the integrators
-            # for intensity evaluation
-            cellParamVecs[...,:-1] *= _np.array(self.vector)
+                # get self.vector because there may be fixed variables
+                # that also need to be directed to the integrators
+                # for intensity evaluation
+                cellParamVecs[...,:-1] *= _np.array(self.vector)
 
-            return cellParamVecs
+                return cellParamVecs
 
-        else:
-            self._cellParamVecs = _np.ones((self._theta.shape[0],
+            else:
+                self._cellParamVecs = _np.ones((self._theta.shape[0],
+                                                self._theta.shape[1],
+                                                len(self.vector)+1),
+                                               dtype=_np.double)
+
+                self._cellParamVecs[...,:-1] *= _np.array(self.vector)
+                for i in range(self._cellParamVecs.shape[1]):
+                    self._cellParamVecs[:,i,-1] *= self._effGrav
+        
+        elif self.mycoolgrid:
+            bhac_inter = BHAC_Interpolator()
+            bhac_inter.coderes= 256
+            bhac_inter.elsewhere_xpsi= self.myelsewhere
+            bhac_inter.xpsi_phi = self._phi
+            if args: # hot region mesh shape information
+                print('Args is activated in elsewhere')
+                print(self._theta)
+                bhac_inter.xpsi_theta = args[0] 
+                cellParamVecs = _np.ones((args[0].shape[0],
+                                          args[0].shape[1],
+                                          len(self.vector)+1),
+                                         dtype=_np.double)
+            
+
+                data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/aligned/data_r+0.400D+01_n0700.csv',
+                coderes=256)
+                data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
+
+                self._cellParamVecs[:,:,0] = data2[:,:] 
+                return cellParamVecs
+
+            else:
+                bhac_inter.xpsi_theta = self._theta 
+                self._cellParamVecs = _np.ones((self._theta.shape[0],
                                             self._theta.shape[1],
                                             len(self.vector)+1),
                                            dtype=_np.double)
 
-            self._cellParamVecs[...,:-1] *= _np.array(self.vector)
+                data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/aligned/data_r+0.400D+01_n0700.csv',
+                coderes=256)
+                data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
+
+                self._cellParamVecs[:,:,0] = data2[:,:] ##Adding the interpolated temperature here..
 
             for i in range(self._cellParamVecs.shape[1]):
                 self._cellParamVecs[:,i,-1] *= self._effGrav

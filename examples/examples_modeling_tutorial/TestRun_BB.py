@@ -133,7 +133,9 @@ primary = xpsi.HotRegion(bounds=bounds,
 	                    max_sqrt_num_cells=64,
 	                    num_leaves=100,
 	                    num_rays=200,
-	                    prefix='p')
+	                    prefix='p',
+                        mycoolgrid = True,
+                        first_spot=True)
 
 class derive(xpsi.Derive):
     def __init__(self):

@@ -11,6 +11,8 @@ from .cellmesh.rays import compute_rays as _compute_rays
 from .Parameter import Parameter, Derive
 from .ParameterSubspace import ParameterSubspace
 
+from .interpolator import BHAC_Interpolator
+
 class RayError(xpsiError):
     """ Raised if a problem was encountered during ray integration. """
 
@@ -212,7 +214,10 @@ class HotRegion(ParameterSubspace):
                       'cede_colatitude',
                       'cede_radius',
                       'cede_azimuth',
-                      'cede_temperature']
+                      'cede_temperature',
+                      'mycoolgrid',
+                      'first_spot',
+                      'second_spot']
 
     def __init__(self,
                  bounds,
@@ -225,6 +230,7 @@ class HotRegion(ParameterSubspace):
                  min_sqrt_num_cells = 10,
                  max_sqrt_num_cells = 80,
                  num_rays = 200,
+                 mycoolgrid = False,
                  num_leaves = 64,
                  num_phases = None,
                  phases = None,
@@ -239,7 +245,13 @@ class HotRegion(ParameterSubspace):
                  is_antiphased = False,
                  custom = None,
                  image_order_limit = None,
+                 first_spot = False,
+                 second_spot = False,
                  **kwargs):
+        
+        self.mycoolgrid = mycoolgrid
+        self.first_spot = first_spot
+        self.second_spot = second_spot
 
         self.is_antiphased = kwargs.get('is_secondary', is_antiphased)
 
@@ -905,9 +917,27 @@ class HotRegion(ParameterSubspace):
                                               self._super_radiates.shape[1],
                                               2),
                                              dtype=_np.double)
+        
+        if not self.mycoolgrid:  
+            self._super_cellParamVecs[...,:-1] *= self['super_temperature']
 
-        self._super_cellParamVecs[...,:-1] *= self['super_temperature']
+        else:
+            #Insert the interpolated values
 
+            bhac_inter = BHAC_Interpolator()
+            bhac_inter.xpsi_theta = self._super_theta
+            bhac_inter.xpsi_phi = self._super_phi
+            bhac_inter.coderes= 256
+            bhac_inter.first_spot = self.first_spot
+            bhac_inter.second_spot = self.second_spot
+
+            data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/inclination_60deg/data_r+0.400D+01_n0324.csv',
+            coderes=256)
+            
+            data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
+
+            self._super_cellParamVecs[:,:,0] = data2[:,:] ##Adding the interpolated temperature here..
+            #print(_np.min(self._super_cellParamVecs[:,:,0]),_np.min(data2[:,:]),_np.min(data1[2]))     
         for i in range(self._super_cellParamVecs.shape[1]):
             self._super_cellParamVecs[:,i,-1] *= self._super_effGrav
 
@@ -919,9 +949,14 @@ class HotRegion(ParameterSubspace):
             self._cede_cellParamVecs = _np.ones((self._cede_radiates.shape[0],
                                                  self._cede_radiates.shape[1],
                                                  2), dtype=_np.double)
-
-            self._cede_cellParamVecs[...,:-1] *= self['cede_temperature']
-
+            if not self.mycoolgrid:
+                self._cede_cellParamVecs[...,:-1] *= self['cede_temperature']
+            else:
+                #Insert the interpolated values
+                xpsi_theta = self._super_theta
+                xpsi_phi = self._super_phi
+                self._cede_cellParamVecs[...,:-1] *= self['cede_temperature']
+                
             for i in range(self._cede_cellParamVecs.shape[1]):
                 self._cede_cellParamVecs[:,i,-1] *= self._cede_effGrav
 

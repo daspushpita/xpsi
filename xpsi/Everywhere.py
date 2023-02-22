@@ -8,6 +8,8 @@ from .cellmesh.rays import compute_rays as _compute_rays
 
 from .Parameter import Parameter
 from .ParameterSubspace import ParameterSubspace
+from .interpolator import BHAC_Interpolator
+
 
 class RayError(xpsiError):
     """ Raised if a problem was encountered during ray integration. """
@@ -117,6 +119,7 @@ class Everywhere(ParameterSubspace):
 
     """
     required_names = ['temperature (if no custom specification)']
+    optional_names = ['mycoolgrid','myeverywhere']
 
     def __init__(self,
                  time_invariant,
@@ -126,6 +129,8 @@ class Everywhere(ParameterSubspace):
                  num_rays = 200,
                  num_leaves = 100,
                  num_phases = None,
+                 mycoolgrid = False,
+                 myeverywhere = False,
                  phases = None,
                  custom = None,
                  image_order_limit = None,
@@ -136,6 +141,9 @@ class Everywhere(ParameterSubspace):
         self.sqrt_num_cells = sqrt_num_cells
 
         self.set_phases(num_leaves, num_phases, phases)
+
+        self.mycoolgrid = mycoolgrid
+        self.myeverywhere = myeverywhere
 
         self.image_order_limit = image_order_limit
 
@@ -400,8 +408,21 @@ class Everywhere(ParameterSubspace):
                                         self._theta.shape[1],
                                         len(self.vector)+1),
                                        dtype=_np.double)
+        if not self.myeverywhere:
+            self._cellParamVecs[...,:-1] *= _np.array(self.vector)
+        else:
+            bhac_inter = BHAC_Interpolator()
+            bhac_inter.coderes= 256
+            bhac_inter.everywhere_xpsi= self.myeverywhere
+            bhac_inter.xpsi_theta = self._theta
+            bhac_inter.xpsi_phi = self._phi
 
-        self._cellParamVecs[...,:-1] *= _np.array(self.vector)
+            data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/inclination_60deg/data_r+0.400D+01_n0324.csv',
+                coderes=256)
+
+            data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
+
+            self._cellParamVecs[:,:,0] = data2[:,:]
 
         for i in range(self._cellParamVecs.shape[1]):
             self._cellParamVecs[:,i,-1] *= self._effGrav

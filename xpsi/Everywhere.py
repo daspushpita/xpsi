@@ -119,7 +119,7 @@ class Everywhere(ParameterSubspace):
 
     """
     required_names = ['temperature (if no custom specification)']
-    optional_names = ['mycoolgrid','myeverywhere']
+    optional_names = ['mycoolgrid','myeverywhere','filename']
 
     def __init__(self,
                  time_invariant,
@@ -134,22 +134,23 @@ class Everywhere(ParameterSubspace):
                  phases = None,
                  custom = None,
                  image_order_limit = None,
-                 _integrator_toggle = False):
+                 _integrator_toggle = False,
+                 filename=False):
 
         self.num_rays = num_rays
-
         self.sqrt_num_cells = sqrt_num_cells
-
         self.set_phases(num_leaves, num_phases, phases)
-
         self.mycoolgrid = mycoolgrid
         self.myeverywhere = myeverywhere
-
+        self.filename = filename
         self.image_order_limit = image_order_limit
 
         if bounds is None: bounds = {}
         if values is None: values = {}
 
+        if self.mycoolgrid is True and self.filename is False:
+            raise ValueError('Filename not given for interpolation')
+        
         if not custom: # setup default temperature parameter
             T = Parameter('temperature',
                           strict_bounds = (3.0, 7.6), # very cold --> very hot

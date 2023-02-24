@@ -217,7 +217,8 @@ class HotRegion(ParameterSubspace):
                       'cede_temperature',
                       'mycoolgrid',
                       'first_spot',
-                      'second_spot']
+                      'second_spot',
+                      'filename']
 
     def __init__(self,
                  bounds,
@@ -247,11 +248,13 @@ class HotRegion(ParameterSubspace):
                  image_order_limit = None,
                  first_spot = False,
                  second_spot = False,
+                 filename = False,
                  **kwargs):
         
         self.mycoolgrid = mycoolgrid
         self.first_spot = first_spot
         self.second_spot = second_spot
+        self.filename = filename
 
         self.is_antiphased = kwargs.get('is_secondary', is_antiphased)
 
@@ -270,6 +273,9 @@ class HotRegion(ParameterSubspace):
         self.image_order_limit = image_order_limit
 
         self.symmetry = symmetry
+
+        if self.mycoolgrid is True and self.filename is False:
+            raise ValueError('Filename not given for interpolation')
 
         # first the parameters that are fundemental to this class
         doc = """
@@ -931,13 +937,29 @@ class HotRegion(ParameterSubspace):
             bhac_inter.first_spot = self.first_spot
             bhac_inter.second_spot = self.second_spot
 
-            data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/inclination_60deg/data_r+0.400D+01_n0324.csv',
-            coderes=256)
+            data1 = bhac_inter.read_regrid(self.filename,coderes=256)
             
             data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
-
+            
             self._super_cellParamVecs[:,:,0] = data2[:,:] ##Adding the interpolated temperature here..
-            #print(_np.min(self._super_cellParamVecs[:,:,0]),_np.min(data2[:,:]),_np.min(data1[2]))     
+            ##########################################################################################
+            ##All the printed min and max Temp, theta ,phi values to figure out the error 
+            # in the interpolation
+            #zp = data1[2]
+            #zp1 = data1[1]
+            #zp2 = data1[0]
+            #print(_np.min(self._super_cellParamVecs[:,:,0]))
+
+            #print('Interpolated min T',_np.min(data2[:,:]),'Code min T',_np.min(zp))
+            #print('XPSI Theta corresponding to min T',self._super_theta[_np.where(data2 == _np.min(data2))[0],_np.where(data2 == _np.min(data2))[1]]) 
+            #print('BHAC theta corresponding to min T',zp1[_np.where(zp == _np.min(zp))[0],_np.where(zp == _np.min(zp))[1]]) 
+            
+            #print('BHAC Phi corresponding to min T',zp2[_np.where(zp == _np.min(zp))[0],_np.where(zp == _np.min(zp))[1]]) 
+            #print('XPSI Phi corresponding to min T',self._super_phi[_np.where(data2 == _np.min(data2))[0],_np.where(data2 == _np.min(data2))[1]]) 
+            #print(self._super_phi[0])
+
+            #print('Interpolated max T',_np.max(self._super_cellParamVecs[:,:,0]),'Code max T',_np.max(data2[:,:]),_np.max(data1[2]))     
+            ###########################################################################################
         for i in range(self._super_cellParamVecs.shape[1]):
             self._super_cellParamVecs[:,i,-1] *= self._super_effGrav
 

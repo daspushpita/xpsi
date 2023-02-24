@@ -84,7 +84,7 @@ class Elsewhere(ParameterSubspace):
 
     """
     required_names = ['elsewhere_temperature (if no custom specification)']
-    optional_names = ['mycoolgrid','myelsewhere']
+    optional_names = ['mycoolgrid','myelsewhere','filename']
 
     def __init__(self,
                  sqrt_num_cells = 64,
@@ -94,18 +94,22 @@ class Elsewhere(ParameterSubspace):
                  custom = None,
                  image_order_limit = None,
                  mycoolgrid = False,
-                 myelsewhere = False):
+                 myelsewhere = False,
+                 filename = False):
 
         self.sqrt_num_cells = sqrt_num_cells
         self.num_rays = num_rays
         self.mycoolgrid = mycoolgrid
         self.myelsewhere = myelsewhere 
-
+        self.filename = filename
         self.image_order_limit = image_order_limit
 
         if bounds is None: bounds = {}
         if values is None: values = {}
 
+        if self.mycoolgrid is True and self.filename is False:
+            raise ValueError('Filename not given for interpolation')
+        
         if not custom: # setup default temperature parameter
             T = Parameter('elsewhere_temperature',
                           strict_bounds = (3.0, 7.6), # very cold --> very hot
@@ -266,8 +270,8 @@ class Elsewhere(ParameterSubspace):
             bhac_inter.elsewhere_xpsi= self.myelsewhere
             bhac_inter.xpsi_phi = self._phi
             if args: # hot region mesh shape information
-                print('Args is activated in elsewhere')
-                print(self._theta)
+                #print('Args is activated in elsewhere')
+                #print(self._theta)
                 bhac_inter.xpsi_theta = args[0] 
                 cellParamVecs = _np.ones((args[0].shape[0],
                                           args[0].shape[1],
@@ -275,8 +279,7 @@ class Elsewhere(ParameterSubspace):
                                          dtype=_np.double)
             
 
-                data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/aligned/data_r+0.400D+01_n0700.csv',
-                coderes=256)
+                data1 = bhac_inter.read_regrid(self.filename,coderes=256)
                 data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
 
                 self._cellParamVecs[:,:,0] = data2[:,:] 
@@ -289,8 +292,7 @@ class Elsewhere(ParameterSubspace):
                                             len(self.vector)+1),
                                            dtype=_np.double)
 
-                data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/aligned/data_r+0.400D+01_n0700.csv',
-                coderes=256)
+                data1 = bhac_inter.read_regrid(self.filename,coderes=256)
                 data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
 
                 self._cellParamVecs[:,:,0] = data2[:,:] ##Adding the interpolated temperature here..

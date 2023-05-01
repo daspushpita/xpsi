@@ -153,7 +153,7 @@ class Everywhere(ParameterSubspace):
         
         if not custom: # setup default temperature parameter
             T = Parameter('temperature',
-                          strict_bounds = (3.0, 7.6), # very cold --> very hot
+                          strict_bounds = (3.0, 10.6), # very cold --> very hot
                           bounds = bounds.get('temperature', None),
                           doc = 'log10(effective temperature [K] everywhere)',
                           symbol = r'$\log_{10}(T\;[\rm{K}])$',
@@ -418,13 +418,13 @@ class Everywhere(ParameterSubspace):
             bhac_inter.xpsi_theta = self._theta
             bhac_inter.xpsi_phi = self._phi
 
-            data1 = bhac_inter.read_regrid('/home/pushpita/Documents/codes_dir/3D_Build/final_runs/inclination_60deg/data_r+0.400D+01_n0324.csv',
-                coderes=256)
+            data1 = bhac_inter.read_regrid(self.filename,coderes=256)
 
             data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
 
             self._cellParamVecs[:,:,0] = data2[:,:]
 
+        ####Switcing on/off effective gravity, oblateness
         for i in range(self._cellParamVecs.shape[1]):
             self._cellParamVecs[:,i,-1] *= self._effGrav
 

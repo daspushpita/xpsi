@@ -19,7 +19,7 @@ cdef double radiusNormalised(double mu,
                              double epsilon,
                              double zeta) nogil:
 
-    return 1.0 + epsilon * (-0.788 + 1.030 * zeta) * mu * mu
+    return 1.0 ##+ epsilon * (-0.788 + 1.030 * zeta) * mu * mu ##Switching off stellar Oblateness
 
 cdef double f_theta(double mu,
                     double radiusNormed,
@@ -30,7 +30,7 @@ cdef double f_theta(double mu,
 
     radiusDerivNormed = -2.0 * epsilon * (-0.788 + 1.030 * zeta) * mu * sqrt(1.0 - mu * mu)
 
-    return radiusDerivNormed / (radiusNormed * sqrt(1.0 - 2.0 * zeta / radiusNormed))
+    return 0.0 ##radiusDerivNormed / (radiusNormed * sqrt(1.0 - 2.0 * zeta / radiusNormed))
 
 cdef double integrand(double theta, void *params) nogil:
 

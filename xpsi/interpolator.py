@@ -67,7 +67,7 @@ class BHAC_Interpolator(ParameterSubspace):
 		x = data['X']
 		y = data['Y']
 		z = data['Z']
-		Temp = np.log10((data['T_MArt']*rho_units*c**3/sigma)**(1./4.))
+		Temp = np.log10((-data['T_MArt']*rho_units*c**3/sigma)**(1./4.))
 		k = int(coderes/2)
 
 		num_cells_lt = 0

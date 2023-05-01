@@ -391,7 +391,8 @@ def integrate(size_t numThreads,
                             terminate[T] = 1
                             break # out of phase loop
                         else:
-                            _phase_lag = gsl_interp_eval(interp_lag[T], defl_ptr, lag_ptr, psi, accel_lag[T])
+                            _phase_lag = 0.0 ###gsl_interp_eval(interp_lag[T], defl_ptr, lag_ptr, psi, accel_lag[T])
+			    ###WARNING::: PHASE_LAG PUT TO ZERO
 
                         for ks in range(2): # phase asymmetric now
                             if (0 < k < leaf_lim - 1

@@ -58,16 +58,21 @@ class BHAC_Interpolator(ParameterSubspace):
 		#Reading the csv file using pandas		
 		data = pd.read_csv(filename)
 		
-		rg = 2.5e5
-		c = 2.99e10
-		Ledd = 1.3e38*(1.68)   #1.68 mass of the NS in solar mass
-		rho_units = (0.1*Ledd/(4*np.pi*rg**2*c**3))
+		solarmass = 1.989e33
+		c = 2.99792458e10
+  		G = 6.67e-8
+		rg = G * 1.68 * solarmass/(c * c)
+		Ledd = 1.3e38   #1.68 mass of the NS in solar mass
+  
+		#Mdot is 1% of Eddington Limit [Mdot = 0.01 * Ledd/(efficiency * c^2)]
+  
+		rho_units = (0.1 * Ledd/(_4pi * rg * rg * c * c * c)) #for efficiency = 0.1
 		sigma = 5.67e-5
 
 		x = data['X']
 		y = data['Y']
 		z = data['Z']
-		Temp = np.log10((-data['T_MArt']*rho_units*c**3/sigma)**(1./4.))
+		Temp = np.log10((np.abs(data['T_MArt'])*rho_units*c**3/sigma)**(1./4.))
 		k = int(coderes/2)
 
 		num_cells_lt = 0

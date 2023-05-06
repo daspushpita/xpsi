@@ -200,6 +200,7 @@ class Elsewhere(ParameterSubspace):
                                                      st.R,
                                                      st.zeta,
                                                      st.epsilon)
+        print(self._cellArea)
 
     def _compute_rays(self, st, threads):
         """ Trace (integrate) a set of rays.

@@ -198,7 +198,7 @@ class Everywhere(ParameterSubspace):
         else: # more general purpose
             self._time_invariant = False
             if not self._integrator_toggle:
-                from .cellmesh.integrator import integrate as _integrator
+		from .cellmesh.integrator import integrate as _integrator
             else:
                 from .cellmesh.integrator_for_azimuthal_invariance import integrate as _integrator
         self._integrator = _integrator

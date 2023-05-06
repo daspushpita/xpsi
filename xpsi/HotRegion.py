@@ -502,7 +502,7 @@ class HotRegion(ParameterSubspace):
 
         self._symmetry = declaration
 
-        # find the required integrator
+        #find the required integrator
         if declaration: # can we safely assume azimuthal invariance?
             from .cellmesh.integrator_for_azimuthal_invariance import integrate as _integrator
         else: # more general purpose
@@ -975,9 +975,16 @@ class HotRegion(ParameterSubspace):
                 self._cede_cellParamVecs[...,:-1] *= self['cede_temperature']
             else:
                 #Insert the interpolated values
-                xpsi_theta = self._super_theta
-                xpsi_phi = self._super_phi
-                self._cede_cellParamVecs[...,:-1] *= self['cede_temperature']
+                bhac_inter.xpsi_theta = self._cede_theta
+                bhac_inter.xpsi_phi = self._cede_phi
+                bhac_inter.coderes= 256
+                bhac_inter.first_spot = self.first_spot
+                bhac_inter.second_spot = self.second_spot
+
+                data2 = bhac_inter.read_regrid(self.filename,coderes=256)
+            
+                data3 = bhac_inter.interpolation_func(coderes=256,thetacode=data2[1],phicode=data2[0],Tempcode=data2[2])
+                self._super_cellParamVecs[:,:,0] = data2[:,:]
                 
             for i in range(self._cede_cellParamVecs.shape[1]):
                 self._cede_cellParamVecs[:,i,-1] *= self._cede_effGrav

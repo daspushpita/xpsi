@@ -29,4 +29,5 @@ cdef double effectiveGravity(double mu,
     g += (c_p + d_p + f_p - d_60) * esq * mu * mu
     g += d_60 * esq * fabs(mu)
 
-    return log10(g * g_0) + 2.0
+    return log10(g) + 2.0
+    #return log10(g * g_0) + 2.0

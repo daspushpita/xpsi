@@ -44,7 +44,7 @@ class Spacetime(ParameterSubspace):
              raise TypeError("Both bounds and values need to be dictionaries.")
 
         f = Parameter('frequency',
-                      strict_bounds = (0.0, 800.0),
+                      strict_bounds = (0.0, 1500.0),
                       bounds = bounds.get('frequency', None),
                       doc = 'Spin frequency [Hz]',
                       symbol = r'$f$',

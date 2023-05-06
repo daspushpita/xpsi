@@ -841,7 +841,7 @@ class Photosphere(ParameterSubspace):
                 raise _exc
 
             if cache_intensities:
-                _override_mem_lim = kwargs.get('_OVERRIDE_MEM_LIM', 1.0)
+                _override_mem_lim = kwargs.get('_OVERRIDE_MEM_LIM', 2.5)
                 if not isinstance(_override_mem_lim, float):
                     raise TypeError('Intensity cache limit override must be a '
                                     'float.')

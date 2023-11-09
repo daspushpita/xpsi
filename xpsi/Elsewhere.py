@@ -95,12 +95,16 @@ class Elsewhere(ParameterSubspace):
                  image_order_limit = None,
                  mycoolgrid = False,
                  myelsewhere = False,
+                 tracer_threshold = 0.6,
+                 T_everywhere = _np.log10(1.e5),
                  filename = False):
 
         self.sqrt_num_cells = sqrt_num_cells
         self.num_rays = num_rays
         self.mycoolgrid = mycoolgrid
         self.myelsewhere = myelsewhere 
+        self.tracer_threshold = tracer_threshold
+        self.T_everywhere = T_everywhere
         self.filename = filename
         self.image_order_limit = image_order_limit
 
@@ -112,7 +116,7 @@ class Elsewhere(ParameterSubspace):
         
         if not custom: # setup default temperature parameter
             T = Parameter('elsewhere_temperature',
-                          strict_bounds = (3.0, 7.6), # very cold --> very hot
+                          strict_bounds = (1.0, 7.6), # very cold --> very hot
                           bounds = bounds.get('elsewhere_temperature', None),
                           doc = 'log10 of the effective temperature elsewhere',
                           symbol = r'$\log_{10}(T_{\rm EW}\;[\rm{K}])$',
@@ -241,6 +245,7 @@ class Elsewhere(ParameterSubspace):
             An *ndarray[n,n]* of mesh-point colatitudes.
 
         """
+        
         if not self.mycoolgrid:
             if args: # hot region mesh shape information
                 cellParamVecs = _np.ones((args[0].shape[0],
@@ -267,7 +272,7 @@ class Elsewhere(ParameterSubspace):
         
         elif self.mycoolgrid:
             bhac_inter = BHAC_Interpolator()
-            bhac_inter.coderes= 256
+            bhac_inter.coderes= 512
             bhac_inter.elsewhere_xpsi= self.myelsewhere
             bhac_inter.xpsi_phi = self._phi
             if args: # hot region mesh shape information
@@ -280,10 +285,13 @@ class Elsewhere(ParameterSubspace):
                                          dtype=_np.double)
             
 
-                data1 = bhac_inter.read_regrid(self.filename,coderes=256)
-                data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
-
-                self._cellParamVecs[:,:,0] = data2[:,:] 
+                data1 = bhac_inter.read_regrid(self.filename,coderes=512)
+                Temperature_interpolated = bhac_inter.temp_interpolation_func(coderes=512,thetacode=data1[1],phicode=data1[0],
+                                                                            Fluxcode=data1[2],tracercode=data1[3],
+                                                                            tracer_threshold=self.tracer_threshold,
+                                                                            T_everywhere=self.T_everywhere)
+                #Temperature_interpolated = _np.log10(1.e7)
+                self._cellParamVecs[:,:,0] = Temperature_interpolated[:,:]
                 return cellParamVecs
 
             else:
@@ -293,10 +301,11 @@ class Elsewhere(ParameterSubspace):
                                             len(self.vector)+1),
                                            dtype=_np.double)
 
-                data1 = bhac_inter.read_regrid(self.filename,coderes=256)
-                data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
-
-                self._cellParamVecs[:,:,0] = data2[:,:] ##Adding the interpolated temperature here..
+                data1 = bhac_inter.read_regrid(self.filename,coderes=512)
+                Temperature_interpolated = bhac_inter.temp_interpolation_func(coderes=512,thetacode=data1[1],phicode=data1[0],
+                                                                            Fluxcode=data1[2],tracercode=data1[3],
+                                                                            tracer_threshold=self.tracer_threshold,
+                                                                            T_everywhere=self.T_everywhere) ##Adding the interpolated temperature here..
 
             for i in range(self._cellParamVecs.shape[1]):
                 self._cellParamVecs[:,i,-1] *= self._effGrav

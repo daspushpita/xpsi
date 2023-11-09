@@ -131,6 +131,8 @@ class Everywhere(ParameterSubspace):
                  num_phases = None,
                  mycoolgrid = False,
                  myeverywhere = False,
+                 tracer_threshold = 0.5,
+                 T_everywhere = 1.e5,
                  phases = None,
                  custom = None,
                  image_order_limit = None,
@@ -142,6 +144,8 @@ class Everywhere(ParameterSubspace):
         self.set_phases(num_leaves, num_phases, phases)
         self.mycoolgrid = mycoolgrid
         self.myeverywhere = myeverywhere
+        self.tracer_threshold = tracer_threshold
+        self.T_everywhere = T_everywhere
         self.filename = filename
         self.image_order_limit = image_order_limit
 
@@ -408,21 +412,24 @@ class Everywhere(ParameterSubspace):
         self._cellParamVecs = _np.ones((self._theta.shape[0],
                                         self._theta.shape[1],
                                         len(self.vector)+1),
-                                       dtype=_np.double)
+                                        dtype=_np.double)
+
         if not self.myeverywhere:
             self._cellParamVecs[...,:-1] *= _np.array(self.vector)
         else:
             bhac_inter = BHAC_Interpolator()
-            bhac_inter.coderes= 256
+            bhac_inter.coderes= 512
             bhac_inter.everywhere_xpsi= self.myeverywhere
             bhac_inter.xpsi_theta = self._theta
             bhac_inter.xpsi_phi = self._phi
 
-            data1 = bhac_inter.read_regrid(self.filename,coderes=256)
+            data1 = bhac_inter.read_regrid(self.filename,coderes=512)
 
-            data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
-
-            self._cellParamVecs[:,:,0] = data2[:,:]
+            Temperature_interpolated = bhac_inter.temp_interpolation_func(coderes=512,thetacode=data1[1],phicode=data1[0],
+                                                                          Fluxcode=data1[2],tracercode=data1[3],
+                                                                          tracer_threshold=self.tracer_threshold,
+                                                                          T_everywhere=self.T_everywhere)
+            self._cellParamVecs[:,:,0] = Temperature_interpolated[:,:]
 
         ####Switcing on/off effective gravity, oblateness
         for i in range(self._cellParamVecs.shape[1]):

@@ -32,9 +32,9 @@ class BHAC_Interpolator(ParameterSubspace):
 
 	def __init__(self,
 				filename ='data',
-				coderes = 256, 
-				num_cells_theta = 256,
-				num_cells_phi = 256,
+				coderes = 512, 
+				num_cells_theta = 512,
+				num_cells_phi = 512,
 				xpsi_theta = None,
 				xpsi_phi = None,
 				first_spot = False,
@@ -58,23 +58,17 @@ class BHAC_Interpolator(ParameterSubspace):
 		#Reading the csv file using pandas		
 		data = pd.read_csv(filename)
 		
-		solarmass = 1.989e33
-		c = 2.99792458e10
-  		G = 6.67e-8
-		rg = G * 1.68 * solarmass/(c * c)
-		Ledd = 1.3e38   #1.68 mass of the NS in solar mass
-  
 		#Mdot is 1% of Eddington Limit [Mdot = 0.01 * Ledd/(efficiency * c^2)]
+		#Need local temperature.. TMA is the flux at infinity, so need to divide it by alpha to get the local flux
   
-		rho_units = (0.1 * Ledd/(_4pi * rg * rg * c * c * c)) #for efficiency = 0.1
-		sigma = 5.67e-5
-
 		x = data['X']
 		y = data['Y']
 		z = data['Z']
-		Temp = np.log10((np.abs(data['T_MArt'])*rho_units*c**3/sigma)**(1./4.))
+		thetabhac = data['theta']
+		phibhac = data['phi']
+		Flux = data['T_MArt']
 		k = int(coderes/2)
-
+		tracer = data['tr1']
 		num_cells_lt = 0
 		
 		if (self.first_spot or self.second_spot or self.elsewhere_xpsi or self.everywhere_xpsi) is False:
@@ -87,23 +81,26 @@ class BHAC_Interpolator(ParameterSubspace):
 
 			phicode = np.zeros((index_j-index_i,coderes))
 			thetacode = np.zeros((index_j-index_i,coderes))
-			Tempcode = np.zeros((index_j-index_i,coderes))
+			Fluxcode = np.zeros((index_j-index_i,coderes))
+			tracercode = np.zeros((index_j-index_i,coderes))
 
 			for i in range(index_i,index_j):
 				for j in range(0,k):
 
-					phicode[i][j+k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i][j+k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
-						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
+					phicode[i,j+k] = phibhac[j+i*coderes]#np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i,j+k] = thetabhac[j+i*coderes]#np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+						#+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i][j+k] = Temp[j+i*coderes]
+					Fluxcode[i,j+k] = Flux[j+i*coderes]
+					tracercode[i,j+k] = tracer[j+i*coderes]
 				for j in range(k,coderes):
 
-					phicode[i][j-k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i][j-k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
-						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
+					phicode[i,j-k] = phibhac[j+i*coderes]#np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i,j-k] = thetabhac[j+i*coderes]#np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+						#+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i][j-k] = Temp[j+i*coderes]
+					Fluxcode[i,j-k] = Flux[j+i*coderes]
+					tracercode[i,j-k] = tracer[j+i*coderes]
 			
 		if self.second_spot:	
 
@@ -112,24 +109,27 @@ class BHAC_Interpolator(ParameterSubspace):
 
 			phicode = np.zeros((index_j-index_i,coderes))
 			thetacode = np.zeros((index_j-index_i,coderes))
-			Tempcode = np.zeros((index_j-index_i,coderes))
+			Fluxcode = np.zeros((index_j-index_i,coderes))
+			tracercode = np.zeros((index_j-index_i,coderes))
 
 			for i in range(index_i,index_j):
 				for j in range(0,k):
 
-					phicode[i-index_i][j+k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i-index_i][j+k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
-						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
+					phicode[i-index_i,j+k] = phibhac[j+i*coderes]#np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i-index_i,j+k] = thetabhac[j+i*coderes]#np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+						#+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i-index_i][j+k] = Temp[j+i*coderes]
+					Fluxcode[i-index_i,j+k] = Flux[j+i*coderes]
+					tracercode[i-index_i,j+k] = tracer[j+i*coderes]
 
 				for j in range(k,coderes):
 
-					phicode[i-index_i][j-k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i-index_i][j-k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
-						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
+					phicode[i-index_i,j-k] = phibhac[j+i*coderes]#np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i-index_i,j-k] = thetabhac[j+i*coderes]#np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+						#+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i-index_i][j-k] = Temp[j+i*coderes]
+					Fluxcode[i-index_i,j-k] = Flux[j+i*coderes]
+					tracercode[i-index_i,j-k] = tracer[j+i*coderes]
 
 		if self.elsewhere_xpsi:
 
@@ -139,24 +139,27 @@ class BHAC_Interpolator(ParameterSubspace):
 
 			phicode = np.zeros((index_j-index_i,coderes))
 			thetacode = np.zeros((index_j-index_i,coderes))
-			Tempcode = np.zeros((index_j-index_i,coderes))
+			Fluxcode = np.zeros((index_j-index_i,coderes))
+			tracercode = np.zeros((index_j-index_i,coderes))
 
 			for i in range(index_i,index_j):
 				for j in range(0,k):
 
-					phicode[i-index_i][j+k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i-index_i][j+k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+					phicode[i-index_i,j+k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i-index_i,j+k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
 						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i-index_i][j+k] = Temp[j+i*coderes]
+					Fluxcode[i-index_i,j+k] = Flux[j+i*coderes]
+					tracercode[i-index_i,j+k] = tracer[j+i*coderes]
 
 				for j in range(k,coderes):
 
-					phicode[i-index_i][j-k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i-index_i][j-k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+					phicode[i-index_i,j-k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i-index_i,j-k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
 						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i-index_i][j-k] = Temp[j+i*coderes]
+					Fluxcode[i-index_i,j-k] = Flux[j+i*coderes]
+					tracercode[i-index_i,j-k] = tracer[j+i*coderes]
 
 		if self.everywhere_xpsi:
 
@@ -165,25 +168,28 @@ class BHAC_Interpolator(ParameterSubspace):
 
 			phicode = np.zeros((index_j-index_i,coderes))
 			thetacode = np.zeros((index_j-index_i,coderes))
-			Tempcode = np.zeros((index_j-index_i,coderes))
+			Fluxcode = np.zeros((index_j-index_i,coderes))
+			tracercode = np.zeros((index_j-index_i,coderes))
 
 			for i in range(index_i,index_j):
 				for j in range(0,k):
 
-					phicode[i][j+k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i][j+k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+					phicode[i,j+k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i,j+k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
 						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i][j+k] = Temp[j+i*coderes]
+					Fluxcode[i,j+k] = Flux[j+i*coderes]
+					tracercode[i,j+k] = tracer[j+i*coderes]
 				for j in range(k,coderes):
 
-					phicode[i][j-k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
-					thetacode[i][j-k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
+					phicode[i,j-k] = np.arctan2(y[j+i*coderes],x[j+i*coderes]) 
+					thetacode[i,j-k] = np.arccos(z[j+i*coderes]/np.sqrt(x[j+i*coderes]**2 \
 						+ y[j+i*coderes]**2 + z[j+i*coderes]**2))
 
-					Tempcode[i][j-k] = Temp[j+i*coderes]
+					Fluxcode[i,j-k] = Flux[j+i*coderes]
+					tracercode[i,j-k] = tracer[j+i*coderes]
 
-		return phicode,thetacode,Tempcode
+		return phicode,thetacode,Fluxcode,tracercode
 
 #First find the nearest index for XPSI grid
 	def nearestpoint(self,thetacode,phicode,xpsitheta,xpsiphi):
@@ -196,18 +202,35 @@ class BHAC_Interpolator(ParameterSubspace):
 		return ix,iy
 
 #Now interpolate
-	def interpolation_func(self,
+	def temp_interpolation_func(self,
 							coderes,
 							thetacode,
 							phicode,
-							Tempcode):
+							Fluxcode,
+							tracercode,
+							tracer_threshold,
+							T_everywhere):
 
 		xpsitheta = self.xpsi_theta
 		xpsiphi = self.xpsi_phi
 
 		lenphi = (np.shape(self.xpsi_phi)[1])
 		lentheta = (np.shape(self.xpsi_phi)[0])
+		Fluxxpsi = np.zeros((lentheta,lenphi))
 		Tempxpsi = np.zeros((lentheta,lenphi))
+		Tracerxpsi = np.zeros((lentheta,lenphi))
+
+		#Constants..................................................................
+		solarmass = 1.989e33
+		c = 2.99e10
+		G = 6.67259e-8
+		rg = G * 1.68 * solarmass/(c * c)
+		Ledd = 1.26e38   #1.68 mass of the NS in solar mass
+		Mdot_units = 0.01*Ledd/(0.1 * c * c)
+		rho_units = Mdot_units/(rg * rg * c ) #for efficiency = 0.1
+		sigma = 5.6704e-5
+		#...........................................................................
+
 		for i in range(0,lentheta):
 			for j in range(0,lenphi):
 
@@ -215,7 +238,7 @@ class BHAC_Interpolator(ParameterSubspace):
 				ix1 = ix2 - 1
 				iy1 = iy2 - 1
 
-				if (ix1 < np.shape(thetacode)[0]-2 and iy1 < np.shape(phicode)[1]-2):
+				if (ix1 < np.shape(thetacode)[0]-1 and iy1 < np.shape(thetacode)[1]-1):
 				
 					x1 = phicode[ix1,iy1]
 					x2 = phicode[ix2,iy2]
@@ -224,30 +247,73 @@ class BHAC_Interpolator(ParameterSubspace):
 					y2 = thetacode[ix1,iy2]
 
 					#phi second index, theta first index
-					c1 = Tempcode[ix1,iy1] * (x2 - xpsiphi[i,j])/(x2 - x1) + \
-						Tempcode[ix2,iy1] * (xpsiphi[i,j] - x1)/(x2 - x1)
+					c1 = Fluxcode[ix1,iy1] * (x2 - xpsiphi[i,j])/(x2 - x1) + \
+						Fluxcode[ix2,iy1] * (xpsiphi[i,j] - x1)/(x2 - x1)
 
-					c2 = Tempcode[ix1,iy2] * (x2 - xpsiphi[i,j])/(x2 - x1) + \
-						Tempcode[ix2,iy2] * (xpsiphi[i,j] - x1)/(x2 - x1)
+					c2 = Fluxcode[ix1,iy2] * (x2 - xpsiphi[i,j])/(x2 - x1) + \
+						Fluxcode[ix2,iy2] * (xpsiphi[i,j] - x1)/(x2 - x1)
 
-					Tempxpsi[i][j] = c1 * (y2 - xpsitheta[i,j])/(y2 - y1) + \
-						c2 * (xpsitheta[i,j] - y1)/(y2 - y1)
-				
+					c3 = tracercode[ix1,iy1] * (x2 - xpsiphi[i,j])/(x2 - x1) + \
+						tracercode[ix2,iy1] * (xpsiphi[i,j] - x1)/(x2 - x1)
+
+					c4 = tracercode[ix1,iy2] * (x2 - xpsiphi[i,j])/(x2 - x1) + \
+						tracercode[ix2,iy2] * (xpsiphi[i,j] - x1)/(x2 - x1)
+            
+					Tracerxpsi[i,j] = c3 * (y2 - xpsitheta[i,j])/(y2 - y1) + \
+						c4 * (xpsitheta[i,j] - y1)/(y2 - y1)
+
+					Fluxxpsi[i,j] = (c1 * (y2 - xpsitheta[i,j])/(y2 - y1) + \
+						c2 * (xpsitheta[i,j] - y1)/(y2 - y1)) 
+					#Fluxxpsi[i,j] = (c1 * (y2 - xpsitheta[i,j])/(y2 - y1) + \
+					#	c2 * (xpsitheta[i,j] - y1)/(y2 - y1)) * Tracerxpsi[i,j]
+     
+					if (Tracerxpsi[i,j] < tracer_threshold):
+						Fluxxpsi[i,j] = T_everywhere
+						Tempxpsi[i,j] = Fluxxpsi[i,j]
+					else:
+						Fluxxpsi[i,j] = (c1 * (y2 - xpsitheta[i,j])/(y2 - y1) + \
+							c2 * (xpsitheta[i,j] - y1)/(y2 - y1))
+						Tempxpsi[i,j] = (_np.abs(Fluxxpsi[i,j])*rho_units*c**3/sigma)**(1./4.)
+
 				else:
 					#At the theta or phi boundary so, doing a zero order interpolation
-					if (iy1 >= np.shape(phicode)[0]-1 and ix1 >= np.shape(phicode)[0]-1):
-						Tempxpsi[i,j] = Tempcode[ix1-1,iy1-1]		
-					elif (ix1 >= np.shape(phicode)[0]-1):
-						Tempxpsi[i,j] = Tempcode[ix1-1,iy1]
-					elif (iy1 >= np.shape(phicode)[0]-1):
-						Tempxpsi[i,j] = Tempcode[ix1,iy1-1]		
-		return Tempxpsi
+					if (iy1 > np.shape(phicode)[0]-1 and ix1 > np.shape(phicode)[0]-1):
+						Tracerxpsi[i,j] = tracercode[ix1-1,iy1-1]
+						Fluxxpsi[i,j] = Fluxcode[ix1-1,iy1-1]
+						if (Tracerxpsi[i,j] < tracer_threshold):
+							Fluxxpsi[i,j] = T_everywhere
+							Tempxpsi[i,j] = Fluxxpsi[i,j]
+						else:
+							Fluxxpsi[i,j] = Fluxcode[ix1-1,iy1-1]
+							Tempxpsi[i,j] = (_np.abs(Fluxxpsi[i,j])*rho_units*c**3/sigma)**(1./4.)
+
+					elif (ix1 > np.shape(phicode)[0]-1):
+						Tracerxpsi[i,j] = tracercode[ix1-1,iy1]
+						Fluxxpsi[i,j] = Fluxcode[ix1-1,iy1]
+						if (Tracerxpsi[i,j] < tracer_threshold):
+							Fluxxpsi[i,j] = T_everywhere
+							Tempxpsi[i,j] = Fluxxpsi[i,j]
+						else:
+							Fluxxpsi[i,j] = Fluxcode[ix1-1,iy1]
+							Tempxpsi[i,j] = (_np.abs(Fluxxpsi[i,j])*rho_units*c**3/sigma)**(1./4.)
+
+					elif (iy1 > np.shape(phicode)[0]-1):
+						Tracerxpsi[i,j] = tracercode[ix1,iy1-1]				
+						Fluxxpsi[i,j] = Fluxcode[ix1,iy1-1]
+						if (Tracerxpsi[i,j] < tracer_threshold):
+							Fluxxpsi[i,j] = T_everywhere
+							Tempxpsi[i,j] = Fluxxpsi[i,j]
+						else:
+							Fluxxpsi[i,j] = Fluxcode[ix1,iy1-1]
+							Tempxpsi[i,j] = (_np.abs(Fluxxpsi[i,j])*rho_units*c**3/sigma)**(1./4.)
+
+		return _np.log10(Tempxpsi)
 
 		def lorentz_interp(self,
 							coderes,
 							thetacode,
 							phicode,
-							Tempcode):
+							Fluxcode):
 
 
 			return Tempxpsi
@@ -264,15 +330,4 @@ class BHAC_Interpolator(ParameterSubspace):
 			z = r * np.cos(theta)
 			ax.plot_surface(x, y, z, facecolors=cm.jet(temp))
 			return 0 
-
-
-
-
-
-
-
-
-
-
-
 		#super().__init__(*args, **kwargs)

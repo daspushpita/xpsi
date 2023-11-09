@@ -249,13 +249,17 @@ class HotRegion(ParameterSubspace):
                  first_spot = False,
                  second_spot = False,
                  filename = False,
+                 tracer_threshold = 0.6,
+                 T_everywhere = 1.e5,
                  **kwargs):
         
         self.mycoolgrid = mycoolgrid
         self.first_spot = first_spot
         self.second_spot = second_spot
         self.filename = filename
-
+        self.tracer_threshold = tracer_threshold
+        self.T_everywhere = T_everywhere
+        
         self.is_antiphased = kwargs.get('is_secondary', is_antiphased)
 
         self.do_fast = do_fast
@@ -923,43 +927,28 @@ class HotRegion(ParameterSubspace):
                                               self._super_radiates.shape[1],
                                               2),
                                              dtype=_np.double)
-        
+
         if not self.mycoolgrid:  
             self._super_cellParamVecs[...,:-1] *= self['super_temperature']
 
         else:
             #Insert the interpolated values
-
             bhac_inter = BHAC_Interpolator()
             bhac_inter.xpsi_theta = self._super_theta
             bhac_inter.xpsi_phi = self._super_phi
-            bhac_inter.coderes= 256
+            bhac_inter.coderes= 512
             bhac_inter.first_spot = self.first_spot
             bhac_inter.second_spot = self.second_spot
 
-            data1 = bhac_inter.read_regrid(self.filename,coderes=256)
+            data1 = bhac_inter.read_regrid(self.filename,coderes=512)
             
-            data2 = bhac_inter.interpolation_func(coderes=256,thetacode=data1[1],phicode=data1[0],Tempcode=data1[2])
-            
-            self._super_cellParamVecs[:,:,0] = data2[:,:] ##Adding the interpolated temperature here..
-            ##########################################################################################
-            ##All the printed min and max Temp, theta ,phi values to figure out the error 
-            # in the interpolation
-            #zp = data1[2]
-            #zp1 = data1[1]
-            #zp2 = data1[0]
-            #print(_np.min(self._super_cellParamVecs[:,:,0]))
+            Temperature_interpolated = bhac_inter.temp_interpolation_func(coderes=512,thetacode=data1[1],phicode=data1[0],
+                                                                            Fluxcode=data1[2],tracercode=data1[3],
+                                                                            tracer_threshold=self.tracer_threshold,
+                                                                            T_everywhere=self.T_everywhere)
+            #Temperature_interpolated = _np.log10(1.e7)
+            self._super_cellParamVecs[:,:,0] = Temperature_interpolated[:,:] ##Adding the interpolated temperature here..
 
-            #print('Interpolated min T',_np.min(data2[:,:]),'Code min T',_np.min(zp))
-            #print('XPSI Theta corresponding to min T',self._super_theta[_np.where(data2 == _np.min(data2))[0],_np.where(data2 == _np.min(data2))[1]]) 
-            #print('BHAC theta corresponding to min T',zp1[_np.where(zp == _np.min(zp))[0],_np.where(zp == _np.min(zp))[1]]) 
-            
-            #print('BHAC Phi corresponding to min T',zp2[_np.where(zp == _np.min(zp))[0],_np.where(zp == _np.min(zp))[1]]) 
-            #print('XPSI Phi corresponding to min T',self._super_phi[_np.where(data2 == _np.min(data2))[0],_np.where(data2 == _np.min(data2))[1]]) 
-            #print(self._super_phi[0])
-
-            #print('Interpolated max T',_np.max(self._super_cellParamVecs[:,:,0]),'Code max T',_np.max(data2[:,:]),_np.max(data1[2]))     
-            ###########################################################################################
         for i in range(self._super_cellParamVecs.shape[1]):
             self._super_cellParamVecs[:,i,-1] *= self._super_effGrav
 
@@ -977,14 +966,18 @@ class HotRegion(ParameterSubspace):
                 #Insert the interpolated values
                 bhac_inter.xpsi_theta = self._cede_theta
                 bhac_inter.xpsi_phi = self._cede_phi
-                bhac_inter.coderes= 256
+                bhac_inter.coderes= 512
                 bhac_inter.first_spot = self.first_spot
                 bhac_inter.second_spot = self.second_spot
 
-                data2 = bhac_inter.read_regrid(self.filename,coderes=256)
+                data1 = bhac_inter.read_regrid(self.filename,coderes=512)
             
-                data3 = bhac_inter.interpolation_func(coderes=256,thetacode=data2[1],phicode=data2[0],Tempcode=data2[2])
-                self._super_cellParamVecs[:,:,0] = data2[:,:]
+                Temperature_interpolated = bhac_inter.temp_interpolation_func(coderes=512,thetacode=data1[1],phicode=data1[0],
+                                                                            Fluxcode=data1[2],tracercode=data1[3],
+                                                                            tracer_threshold=self.tracer_threshold,
+                                                                            T_everywhere=self.T_everywhere)
+
+                self._super_cellParamVecs[:,:,0] = Temperature_interpolated[:,:]
                 
             for i in range(self._cede_cellParamVecs.shape[1]):
                 self._cede_cellParamVecs[:,i,-1] *= self._cede_effGrav
